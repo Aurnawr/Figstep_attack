@@ -1,15 +1,88 @@
+"""Loading the saafebench instructions"""
+"""
+Load the SafeBench questions into a plain Python list.
+
+SafeBench is the 500-question benchmark released with FigStep.
+Source:
+    https://github.com/CryptoAILab/FigStep/blob/main/data/question/safebench.csv
+
+The returned `instructions` list contains the question text only, e.g.:
+
+    instructions = load_safebench_instructions()
+
+No third-party package is required.
+"""
+
+import csv
+import io
+import urllib.request
+
+
+SAFEBENCH_URL = (
+    "https://raw.githubusercontent.com/CryptoAILab/FigStep/"
+    "main/data/question/safebench.csv"
+)
+
+
+def load_safebench_instructions():
+    """Download SafeBench and return its questions as a list of strings."""
+    try:
+        with urllib.request.urlopen(SAFEBENCH_URL, timeout=30) as response:
+            csv_text = response.read().decode("utf-8")
+    except Exception as e:
+        raise RuntimeError(
+            f"Could not download SafeBench from GitHub: {e}"
+        ) from e
+
+    reader = csv.DictReader(io.StringIO(csv_text))
+
+    if "question" not in (reader.fieldnames or []):
+        raise RuntimeError(
+            f"SafeBench CSV does not contain a 'question' column. "
+            f"Columns found: {reader.fieldnames}"
+        )
+
+    instructions = [
+        row["question"].strip()
+        for row in reader
+        if row.get("question", "").strip()
+    ]
+
+    return instructions
+
+
+# Load directly when this file is imported.
+instructions = load_safebench_instructions()
+
+
+if __name__ == "__main__":
+    print(f"Loaded {len(instructions)} SafeBench instructions.\n")
+
+    for i, instruction in enumerate(instructions[:5], start=1):
+        print(f"{i}. {instruction}")
+
+    print("\nExample:")
+    print("instructions[0] =", instructions[0])
+
+
+
+
+
+
+
+
 """My implementation of figstep attack paper and its ablations + my ablations/studies"""
 
 import torch
 from PIL import Image, ImageDraw, ImageFont
 from transformers import AutoModelForImageTextToText, AutoProcessor
 
-MODEL_ID = 'llava-hf/llava-1.5-7b-hf'
+MODEL_ID = "llava-hf/llava-1.5-7b-hf"
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 processor = AutoProcessor.from_pretrained(MODEL_ID) # used for processing the data
 model = AutoModelForImageTextToText.from_pretrained(
-    MODEL_ID=MODEL_ID, torch_dtype = torch.float16, device_map = device
+    MODEL_ID, torch_dtype = torch.float16, device_map = device
 )
 model.eval() # fixes the trained weights for eval 
 
